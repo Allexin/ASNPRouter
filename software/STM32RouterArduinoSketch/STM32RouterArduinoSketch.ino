@@ -26,9 +26,9 @@ void resetWatchDog(){
 const long DEFAULT_BAUD_RATE = 19200;
 
 const int PORTS_COUNT = 3;
-cPortHandler* ports[PORTS_COUNT];
+cPortHandler ports[PORTS_COUNT];
 
-cSysMessageHandler* sysMsgHandler;
+cSysMessageHandler sysMsgHandler(ports, PORTS_COUNT);
 
 
 void offLed(){
@@ -49,16 +49,14 @@ void setup() {
   Serial2.begin(DEFAULT_BAUD_RATE);
   Serial3.begin(DEFAULT_BAUD_RATE);  
 
-  ports[0] = new cPortHandler(&Serial1);
-  ports[1] = new cPortHandler(&Serial2);
-  ports[2] = new cPortHandler(&Serial3);
-
-  sysMsgHandler = new cSysMessageHandler(ports, PORTS_COUNT);
+  ports[0].setStream(&Serial1);
+  ports[1].setStream(&Serial2);
+  ports[2].setStream(&Serial3);
 
   delay(400);
   //request all devices with listener addresses
   for (int i = 0; i<PORTS_COUNT; ++i)
-    ports[i]->queuePackage(PING_BROADCAST);
+    ports[i].queuePackage(PING_BROADCAST);
 
   startWatchDog();
   
@@ -67,21 +65,21 @@ void setup() {
 }
 
 bool processPort(int portIndex, long dt){
-  if (ports[portIndex]->processData(dt)){    
-    uint8_t* receivedPackage = ports[portIndex]->getReceivedPackage();
-    sSysMessageInfo state =  sysMsgHandler->getMessageInfo(receivedPackage);
+  if (ports[portIndex].processData(dt)){    
+    uint8_t* receivedPackage = ports[portIndex].getReceivedPackage();
+    sSysMessageInfo state =  sysMsgHandler.getMessageInfo(receivedPackage);
 
     if (state.needSysHandling){    
-      sysMsgHandler->processSysMessage(receivedPackage, portIndex);
+      sysMsgHandler.processSysMessage(receivedPackage, portIndex);
     }
     
     if (state.needDefaultHandling){
       for (int i = 0; i<PORTS_COUNT; ++i)
         if (i!=portIndex){
-          ports[i]->queuePackage(receivedPackage);
+          ports[i].queuePackage(receivedPackage);
         }
     }
-    ports[portIndex]->clearReceivedPackage();
+    ports[portIndex].clearReceivedPackage();
     return true;
   }
   return false;
@@ -106,21 +104,21 @@ void loop() {
     haveData = true;
 
   for (int i = 0; i<PORTS_COUNT; ++i){
-    if (ports[i]->isOverflow()){
+    if (ports[i].isOverflow()){
       overflowTime = OVERFLOW_TIME;
     }
-    if (ports[i]->isDataError() && errorTime<=0){
+    if (ports[i].isDataError() && errorTime<=0){
       errorTime = ERROR_TIME;
     }
   }
-  if (sysMsgHandler->isDataError() && errorTime<=0){
+  if (sysMsgHandler.isDataError() && errorTime<=0){
     errorTime = ERROR_TIME;
   }
-  sysMsgHandler->update(dt);
+  sysMsgHandler.update(dt);
 
   bool canSleep = true;
   for (int i = 0; i<PORTS_COUNT; ++i){
-    if (ports[i]->startSending())
+    if (ports[i].startSending())
       canSleep = false;
   }
   

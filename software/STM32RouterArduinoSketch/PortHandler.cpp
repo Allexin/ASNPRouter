@@ -2,19 +2,19 @@
 
 const long DATA_TIMEOUT = 500;
 
-
-cPortHandler::cPortHandler(SerialUART* serial){
-  m_Stream = serial;
+cPortHandler::cPortHandler(){
   m_SendBufferSize = 0;
   m_ReceiveBufferSize = 0;
   m_ReceiverState = WAIT_START;
 
-  m_SendBuffer = new uint8_t[SEND_BUFFER_SIZE];
-  m_ReceiveBuffer = new uint8_t[PACKAGE_BUFFER_SIZE];
-
   m_Overflow = false;
   m_DataError = false;
   setAddressEnable(BROADCAST_ADDRESS);
+}
+
+void cPortHandler::setStream(SerialUART* serial)
+{
+  m_Stream = serial;
 }
 
 
